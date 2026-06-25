@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: demo
+
+simulation:
+  failureProbability: 0.7
+  maxRetries: 3
+
+planner:
+  max-parallel-executions: 3

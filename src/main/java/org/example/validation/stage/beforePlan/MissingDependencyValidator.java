@@ -1,8 +1,9 @@
-package org.example.validation.stage;
+package org.example.validation.stage.beforePlan;
 
 import org.example.domain.VulnerabilityScript;
 import org.example.validation.ValidationChain;
 import org.example.validation.ValidationContext;
+import org.example.validation.stage.ValidatorStage;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.stream.Collectors;
 public class MissingDependencyValidator implements ValidatorStage {
 
     @Override
-    public void executeValidation(ValidationContext context, ValidationChain chain) {
+    public void executeValidationBeforePlan(ValidationContext context, ValidationChain chain) {
 
         Set<Integer> existingScriptIds = context.getScripts().stream()
             .map(VulnerabilityScript::getScriptId)

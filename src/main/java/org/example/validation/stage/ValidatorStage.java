@@ -4,5 +4,9 @@ import org.example.validation.ValidationChain;
 import org.example.validation.ValidationContext;
 
 public interface ValidatorStage {
-    void executeValidation(ValidationContext context, ValidationChain chain);
+
+    default void executeValidationBeforePlan(ValidationContext context, ValidationChain chain) {}
+
+    default void executeValidationAfterPlan(ValidationContext context, ValidationChain chain) {}
+
 }

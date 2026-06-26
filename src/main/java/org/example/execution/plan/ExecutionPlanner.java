@@ -9,7 +9,7 @@ import java.util.Collection;
 public interface ExecutionPlanner {
 
     ExecutionPlan createPlan(Collection<VulnerabilityScript> scripts);
-    ValidationResult validate(ExecutionPlan plan);
+    //ValidationResult validate(ExecutionPlan plan);
 
     /*
     PlanAnalysis analyze(

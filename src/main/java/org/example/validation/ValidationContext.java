@@ -14,13 +14,6 @@ public class ValidationContext {
     private final List<VulnerabilityScript> scripts;
     private final List<String> warnings = new ArrayList<>();
     private final List<String> errors = new ArrayList<>();
-
-    private List<List<Integer>> cycles = new ArrayList<>();
-    private List<Integer> criticalPathNodes = new ArrayList<>();
-
-    private int criticalPathDuration = 0;
-    private double criticalPathPercentage = 0.0;
-
     private boolean canProceed = true;
 
     public void addWarningLog(String message) {

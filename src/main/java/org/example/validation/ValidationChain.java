@@ -18,7 +18,7 @@ public class ValidationChain {
         if (context.isCanProceed() && currentPosition.get() < validatorStages.size()) {
             ValidatorStage nextStage = validatorStages.get(currentPosition.get());
             currentPosition.set(currentPosition.get() + 1);
-            nextStage.executeValidation(context, this);
+            nextStage.executeValidationBeforePlan(context, this);
         } else {
             currentPosition.remove();
         }

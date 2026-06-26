@@ -1,8 +1,9 @@
-package org.example.validation.stage;
+package org.example.validation.stage.beforePlan;
 
 import org.example.graph.DependencyGraph;
 import org.example.validation.ValidationChain;
 import org.example.validation.ValidationContext;
+import org.example.validation.stage.ValidatorStage;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -14,7 +15,7 @@ import java.util.Queue;
 public class CircularDependencyValidator implements ValidatorStage {
 
     @Override
-    public void executeValidation(ValidationContext context, ValidationChain chain) {
+    public void executeValidationBeforePlan(ValidationContext context, ValidationChain chain) {
         DependencyGraph graph = DependencyGraph.buildGraph(context.getScripts());
         Map<Integer, Integer> currentInDegrees = new HashMap<>();
         Queue<Integer> queue = new LinkedList<>();

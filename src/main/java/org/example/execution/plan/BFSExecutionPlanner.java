@@ -36,7 +36,7 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
         List<ExecutionPlan.ExecutionWave> waves = new ArrayList<>();
 
         while (!readyScripts.isEmpty()) {
-            int waveSize = readyScripts.size();
+            int waveSize = Math.min(readyScripts.size(), plannerConfig.maxParallelExecutions());
             List<VulnerabilityScript> currentWaveScripts = new ArrayList<>(waveSize);
 
             for (int i = 0; i < waveSize; i++) {
@@ -62,17 +62,41 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
         return new ExecutionPlan(waves);
     }
 
-    @Override
-    public ValidationResult validate(ExecutionPlan plan) {
-        return null;
-    }
 
     @Override
     public void addScript(ExecutionPlan plan, VulnerabilityScript script) {
         List<ExecutionPlan.ExecutionWave> waves = plan.waves();
         List<Integer> dependencies = script.getDependencies() == null ? Collections.emptyList() : script.getDependencies();
 
-        int targetWaveIndex = 0;
+        int targetWaveIndex = -1;
 
+        //script should appear in at least (maximal + 1) wave of all script dependencies
+        for (int i = 0; i < waves.size(); i++) {
+            ExecutionPlan.ExecutionWave currentWave = waves.get(i);
+            boolean containsDependencyInWave = currentWave.scripts().stream().anyMatch(dependencies::contains);
+
+            if (containsDependencyInWave) {
+                targetWaveIndex = Math.max(targetWaveIndex, i);
+            }
+        }
+
+        //wave exists, script must appear in next wave
+        if (targetWaveIndex != -1) targetWaveIndex++;
+
+        //find available wave
+        while (targetWaveIndex < waves.size() && targetWaveIndex >= 0) {
+            if (waves.get(targetWaveIndex).scripts().size() < plannerConfig.maxParallelExecutions()) {
+                break;
+            }
+            targetWaveIndex++;
+        }
+
+        if (targetWaveIndex < waves.size() && targetWaveIndex >= 0) {
+            waves.get(targetWaveIndex).scripts().add(script);
+        } else {
+            List<VulnerabilityScript> newWave = new ArrayList<>();
+            newWave.add(script);
+            waves.add(new ExecutionPlan.ExecutionWave(newWave));
+        }
     }
 }

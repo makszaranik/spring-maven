@@ -1,21 +1,16 @@
 package org.example.validation;
 
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.Builder;
 import org.example.domain.VulnerabilityScript;
 
-import java.util.ArrayList;
 import java.util.List;
 
-@Data
-@RequiredArgsConstructor
-public class ValidationContext {
-
-    private final List<VulnerabilityScript> scripts;
-    private final List<String> warnings = new ArrayList<>();
-    private final List<String> errors = new ArrayList<>();
-    private boolean canProceed = true;
-
+@Builder
+public record ValidationContext(
+    List<VulnerabilityScript> scripts,
+    List<String> warnings,
+    List<String> errors
+) {
     public void addWarningLog(String message) {
         this.warnings.add(message);
     }
@@ -24,4 +19,7 @@ public class ValidationContext {
         this.errors.add(message);
     }
 
+    public boolean isCanProceed() {
+        return this.errors.isEmpty();
+    }
 }

@@ -1,8 +1,8 @@
 package org.example.validation.stage.beforePlan;
 
 import org.example.graph.DependencyGraph;
-import org.example.validation.ValidationChain;
 import org.example.validation.ValidationContext;
+import org.example.validation.chain.ValidationChain;
 import org.example.validation.stage.ValidatorStage;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +16,7 @@ public class CircularDependencyValidator implements ValidatorStage {
 
     @Override
     public void executeValidationBeforePlan(ValidationContext context, ValidationChain chain) {
-        DependencyGraph graph = DependencyGraph.buildGraph(context.getScripts());
+        DependencyGraph graph = DependencyGraph.buildGraph(context.scripts());
         Map<Integer, Integer> currentInDegrees = new HashMap<>();
         Queue<Integer> queue = new LinkedList<>();
 
@@ -46,10 +46,9 @@ public class CircularDependencyValidator implements ValidatorStage {
 
         if (processedCount != graph.getAllVertexIds().size()) {
             context.addErrorLog("The execution graph contains an unresolvable cycle.");
-            context.setCanProceed(false);
             return;
         }
 
-        chain.doNext(context);
+        chain.doNextBefore(context);
     }
 }

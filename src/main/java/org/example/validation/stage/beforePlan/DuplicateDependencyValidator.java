@@ -1,8 +1,8 @@
 package org.example.validation.stage.beforePlan;
 
 import org.example.domain.VulnerabilityScript;
-import org.example.validation.ValidationChain;
 import org.example.validation.ValidationContext;
+import org.example.validation.chain.ValidationChain;
 import org.example.validation.stage.ValidatorStage;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +16,7 @@ public class DuplicateDependencyValidator implements ValidatorStage {
 
     @Override
     public void executeValidationBeforePlan(ValidationContext context, ValidationChain chain) {
-        for (VulnerabilityScript script : context.getScripts()) {
+        for (VulnerabilityScript script : context.scripts()) {
             List<Integer> deps = script.getDependencies();
             if (deps != null && !deps.isEmpty()) {
                 Set<Integer> uniqueDeps = new HashSet<>(deps);
@@ -26,6 +26,6 @@ public class DuplicateDependencyValidator implements ValidatorStage {
                 }
             }
         }
-        chain.doNext(context);
+        chain.doNextBefore(context);
     }
 }

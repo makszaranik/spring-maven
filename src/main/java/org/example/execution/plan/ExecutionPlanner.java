@@ -8,7 +8,7 @@ import java.util.Collection;
 
 public interface ExecutionPlanner {
 
-    ExecutionPlan createPlan(Collection<VulnerabilityScript> scripts, PlannerConfig configuration);
+    ExecutionPlan createPlan(Collection<VulnerabilityScript> scripts);
     ValidationResult validate(ExecutionPlan plan);
 
     /*
@@ -18,5 +18,5 @@ public interface ExecutionPlanner {
 
      */
 
-    void addScript(ExecutionPlan plan, VulnerabilityScript script, PlannerConfig configuration);
+    void addScript(ExecutionPlan plan, VulnerabilityScript script);
 }

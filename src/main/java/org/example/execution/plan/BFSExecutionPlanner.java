@@ -17,9 +17,10 @@ import java.util.*;
 public class BFSExecutionPlanner implements ExecutionPlanner {
 
     private final SchedulingOrderStrategy orderStrategy;
+    private final PlannerConfig plannerConfig;
 
     @Override
-    public ExecutionPlan createPlan(Collection<VulnerabilityScript> scripts, PlannerConfig configuration) {
+    public ExecutionPlan createPlan(Collection<VulnerabilityScript> scripts) {
         DependencyGraph graph = DependencyGraph.buildGraph(scripts);
         Map<Integer, Integer> currentInDegrees = new HashMap<>();
         Queue<VulnerabilityScript> readyScripts = new PriorityQueue<>(orderStrategy);
@@ -67,7 +68,11 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
     }
 
     @Override
-    public void addScript(ExecutionPlan plan, VulnerabilityScript script, PlannerConfig configuration) {
+    public void addScript(ExecutionPlan plan, VulnerabilityScript script) {
+        List<ExecutionPlan.ExecutionWave> waves = plan.waves();
+        List<Integer> dependencies = script.getDependencies() == null ? Collections.emptyList() : script.getDependencies();
+
+        int targetWaveIndex = 0;
 
     }
 }

@@ -27,21 +27,23 @@ public class ParallelExecutionSimulator implements ExecutionSimulator {
         Map<Integer, Integer> retryStatistics = new ConcurrentHashMap<>();
         int totalExecutionTime = 0;
 
-        for (ExecutionPlan.ExecutionWave wave : plan.waves()) {
-            List<VulnerabilityScript> readyToExecute = wave.scripts().stream()
-                .filter(script -> !hasFailedDependencies(script, failedScripts))
-                .toList();
+        try (ExecutorService executor = Executors.newFixedThreadPool(plannerConfig.maxParallelExecutions())) {
 
-            List<Callable<ScriptResult>> tasksToExecute = readyToExecute.stream()
-                .map(script -> (Callable<ScriptResult>) () -> executeScript(script))
-                .toList();
+            for (ExecutionPlan.ExecutionWave wave : plan.waves()) {
+                List<VulnerabilityScript> readyToExecute = wave.scripts().stream()
+                    .filter(script -> !hasFailedDependencies(script, failedScripts))
+                    .toList();
 
-            try (ExecutorService executor = Executors.newFixedThreadPool(plannerConfig.maxParallelExecutions())) {
+                List<Callable<ScriptResult>> tasksToExecute = readyToExecute.stream()
+                    .map(script -> (Callable<ScriptResult>) () -> executeScript(script))
+                    .toList();
+
                 List<Future<ScriptResult>> futureTasks = executor.invokeAll(tasksToExecute);
                 int maxWaveTime = 0;
 
                 for (Future<ScriptResult> resultFuture : futureTasks) {
                     ScriptResult result = resultFuture.get();
+
                     if (result.success()) {
                         successfulCompletedScripts.add(result.scriptId());
                     } else {
@@ -64,16 +66,16 @@ public class ParallelExecutionSimulator implements ExecutionSimulator {
     }
 
 
-    boolean isExecutedSuccessfully() {
+    private boolean isExecutedSuccessfully() {
         return ThreadLocalRandom.current().nextDouble() >= simulationConfig.failureProbability();
     }
 
-    boolean hasFailedDependencies(VulnerabilityScript script, List<Integer> failedOrAbortedIds) {
+    private boolean hasFailedDependencies(VulnerabilityScript script, List<Integer> failedOrAbortedIds) {
         if (script.getDependencies() == null) return false;
         return script.getDependencies().stream().anyMatch(failedOrAbortedIds::contains);
     }
 
-    int scriptExecutionTime(VulnerabilityScript script, int attemptsNumber) {
+    private int scriptExecutionTime(VulnerabilityScript script, int attemptsNumber) {
         return script.getEstimatedDurationSeconds() * attemptsNumber;
     }
 

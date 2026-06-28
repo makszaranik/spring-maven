@@ -50,12 +50,11 @@ public class DefaultScriptExecutor implements ScriptExecutor {
 
         int totalScripts = allScripts.size();
         int totalWaves = plan.waves().size();
-        double avgParallelism = totalWaves == 0 ? 0 : (double) totalScripts / totalWaves;
 
+        double avgParallelism = calculateAvgParallelism(totalWaves, totalScripts);
         int maxParallelism = plan.waves().stream().mapToInt(w -> w.scripts().size()).max().orElse(0);
-
         int maxLimit = plannerConfig.maxParallelExecutions();
-        double efficiency = (totalWaves == 0 || maxLimit == 0) ? 0 : (double) totalScripts / (totalWaves * maxLimit);
+        double efficiency = calculateEfficiency(totalWaves, maxLimit, totalScripts);
 
         return PlanAnalysis.builder()
             .totalScripts(totalScripts)
@@ -92,5 +91,12 @@ public class DefaultScriptExecutor implements ScriptExecutor {
             .build();
     }
 
+    private double calculateEfficiency(int totalWaves, int maxLimit, int totalScripts) {
+        return (totalWaves == 0 || maxLimit == 0) ? 0 : (double) totalScripts / (totalWaves * maxLimit);
+    }
+
+    private double calculateAvgParallelism(int totalWaves, int totalScripts) {
+        return (totalWaves == 0 ? 0 : (double) totalScripts / totalWaves);
+    }
 
 }

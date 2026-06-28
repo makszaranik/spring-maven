@@ -3,8 +3,8 @@ spring:
     name: demo
 
 simulation:
-  failureProbability: 0.7
-  maxRetries: 3
+  failureProbability: 0.5
+  maxRetries: 5
 
 planner:
-  max-parallel-executions: 3
+  max-parallel-executions: 4

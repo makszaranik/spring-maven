@@ -1,0 +1,7 @@
+1782653163068:executor run
+1782653166164:run
+1782656174850:executor run --source=scripts.json
+1782656193504:executor run --source="scripts.json"
+1782656227491:executor run --source scripts.json
+1782656249753:executor run --source /src/main/resources/scripts.json
+1782656260063:executor run --source src/main/resources/scripts.json

@@ -1,0 +1,32 @@
+[
+  {
+    "scriptId": 1,
+    "dependencies": [],
+    "estimatedDurationSeconds": 15,
+    "priority": "LOW"
+  },
+  {
+    "scriptId": 2,
+    "dependencies": [1],
+    "estimatedDurationSeconds": 45,
+    "priority": "MEDIUM"
+  },
+  {
+    "scriptId": 3,
+    "dependencies": [1],
+    "estimatedDurationSeconds": 30,
+    "priority": "HIGH"
+  },
+  {
+    "scriptId": 4,
+    "dependencies": [2, 3],
+    "estimatedDurationSeconds": 60,
+    "priority": "CRITICAL"
+  },
+  {
+    "scriptId": 5,
+    "dependencies": null,
+    "estimatedDurationSeconds": 10,
+    "priority": "LOW"
+  }
+]

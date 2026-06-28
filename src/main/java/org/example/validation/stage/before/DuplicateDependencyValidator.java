@@ -1,9 +1,11 @@
-package org.example.validation.stage.beforePlan;
+package org.example.validation.stage.before;
 
 import org.example.domain.VulnerabilityScript;
 import org.example.validation.ValidationContext;
 import org.example.validation.chain.ValidationChain;
 import org.example.validation.stage.ValidatorStage;
+import org.jspecify.annotations.NonNull;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -11,11 +13,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Order(2)
 @Component
 public class DuplicateDependencyValidator implements ValidatorStage {
 
     @Override
-    public void executeValidationBeforePlan(ValidationContext context, ValidationChain chain) {
+    public void executeValidationBeforePlan(@NonNull ValidationContext context, @NonNull ValidationChain chain) {
         for (VulnerabilityScript script : context.scripts()) {
             List<Integer> deps = script.getDependencies();
             if (deps != null && !deps.isEmpty()) {
@@ -26,6 +29,6 @@ public class DuplicateDependencyValidator implements ValidatorStage {
                 }
             }
         }
-        chain.doNextBefore(context);
+        chain.doNext(chain, context);
     }
 }

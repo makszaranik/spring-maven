@@ -1,22 +1,13 @@
 package org.example.execution.plan;
 
-import org.example.config.PlannerConfig;
 import org.example.domain.VulnerabilityScript;
-import org.example.validation.ValidationResult;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 
 public interface ExecutionPlanner {
 
-    ExecutionPlan createPlan(Collection<VulnerabilityScript> scripts);
-    //ValidationResult validate(ExecutionPlan plan);
+    @NonNull ExecutionPlan createPlan(@NonNull Collection<VulnerabilityScript> scripts);
 
-    /*
-    PlanAnalysis analyze(
-        ExecutionPlan plan
-    );
-
-     */
-
-    void addScript(ExecutionPlan plan, VulnerabilityScript script);
+    void addScript(@NonNull ExecutionPlan plan, @NonNull VulnerabilityScript script);
 }

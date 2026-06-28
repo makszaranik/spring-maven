@@ -1,12 +1,14 @@
 package org.example.graph;
 
 import lombok.Builder;
+import org.example.domain.VulnerabilityScript;
+import org.jspecify.annotations.NonNull;
 
 import java.util.*;
 
 public class DependencyGraphUtils {
 
-    public static List<List<Integer>> findAllCycles(DependencyGraph graph) {
+    public static @NonNull List<List<Integer>> findAllCycles(@NonNull DependencyGraph graph) {
         List<List<Integer>> allCycles = new ArrayList<>();
         Map<Integer, Integer> visited = new HashMap<>(); // 0 - not visited, 1 - processing, 2 - finished
         List<Integer> currentPath = new ArrayList<>();
@@ -25,8 +27,8 @@ public class DependencyGraphUtils {
     }
 
 
-    private static void dfs(DependencyGraph graph, int v, Map<Integer, Integer> visited,
-                            List<Integer> currentPath, List<List<Integer>> allCycles) {
+    private static void dfs(@NonNull DependencyGraph graph, int v, @NonNull Map<Integer, Integer> visited,
+                            @NonNull List<Integer> currentPath, @NonNull List<List<Integer>> allCycles) {
 
         visited.put(v, 1);
         currentPath.add(v);
@@ -49,7 +51,7 @@ public class DependencyGraphUtils {
         currentPath.removeLast();
     }
 
-    public static CriticalPath calculateCriticalPath(DependencyGraph graph) {
+    public static @NonNull CriticalPath calculateCriticalPath(@NonNull DependencyGraph graph) {
         Map<Integer, CriticalPath> used = new HashMap<>();
 
         CriticalPath maxPath = CriticalPath.builder()
@@ -60,7 +62,10 @@ public class DependencyGraphUtils {
         int totalExecutionTimeAllScripts = 0;
 
         for (Integer vertex : graph.getAllVertexIds()) {
-            totalExecutionTimeAllScripts += graph.getVertex(vertex).getEstimatedDurationSeconds();
+            VulnerabilityScript script = graph.getVertex(vertex);
+            if (script != null) {
+                totalExecutionTimeAllScripts += script.getEstimatedDurationSeconds();
+            }
         }
 
         for (Integer vertex : graph.getAllVertexIds()) {
@@ -80,18 +85,19 @@ public class DependencyGraphUtils {
 
     }
 
-    private static double executionTimePercentage(int totalExecutionTimeAllScripts, CriticalPath maxPath) {
+    private static double executionTimePercentage(int totalExecutionTimeAllScripts, @NonNull CriticalPath maxPath) {
         return totalExecutionTimeAllScripts == 0 ? 0.0 :
             ((double) maxPath.duration() / totalExecutionTimeAllScripts) * 100.0;
     }
 
-    private static CriticalPath findLongestPath(DependencyGraph graph, int currentVertex, Map<Integer, CriticalPath> used) {
+    private static @NonNull CriticalPath findLongestPath(@NonNull DependencyGraph graph, int currentVertex, @NonNull Map<Integer, CriticalPath> used) {
 
         if (used.containsKey(currentVertex)) {
             return used.get(currentVertex);
         }
 
-        int durationSeconds = graph.getVertex(currentVertex).getEstimatedDurationSeconds();
+        VulnerabilityScript script = graph.getVertex(currentVertex);
+        int durationSeconds = script != null ? script.getEstimatedDurationSeconds() : 0;
 
         CriticalPath bestChildPath = CriticalPath.builder()
             .vertexes(Collections.emptyList())
@@ -124,6 +130,7 @@ public class DependencyGraphUtils {
         List<Integer> vertexes,
         int duration,
         double percentage
-    ) {}
+    ) {
+    }
 
 }

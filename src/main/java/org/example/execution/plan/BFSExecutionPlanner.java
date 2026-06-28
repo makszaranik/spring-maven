@@ -6,7 +6,7 @@ import org.example.config.PlannerConfig;
 import org.example.domain.VulnerabilityScript;
 import org.example.graph.DependencyGraph;
 import org.example.sheduling.SchedulingOrderStrategy;
-import org.example.validation.ValidationResult;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -20,10 +20,11 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
     private final PlannerConfig plannerConfig;
 
     @Override
-    public ExecutionPlan createPlan(Collection<VulnerabilityScript> scripts) {
+    public @NonNull ExecutionPlan createPlan(@NonNull Collection<VulnerabilityScript> scripts) {
         DependencyGraph graph = DependencyGraph.buildGraph(scripts);
         Map<Integer, Integer> currentInDegrees = new HashMap<>();
         Queue<VulnerabilityScript> readyScripts = new PriorityQueue<>(orderStrategy);
+        Set<Integer> processedScripts = new HashSet<>();
 
         for (Integer scriptId : graph.getAllVertexIds()) {
             int inDegree = graph.getInDegree(scriptId);
@@ -34,7 +35,6 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
         }
 
         List<ExecutionPlan.ExecutionWave> waves = new ArrayList<>();
-
         while (!readyScripts.isEmpty()) {
             int waveSize = Math.min(readyScripts.size(), plannerConfig.maxParallelExecutions());
             List<VulnerabilityScript> currentWaveScripts = new ArrayList<>(waveSize);
@@ -45,12 +45,13 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
 
             for (VulnerabilityScript executedScript : currentWaveScripts) {
                 int currentVertexId = executedScript.getScriptId();
+                processedScripts.add(currentVertexId);
 
                 for (Integer dependentVertexId : graph.getAdjacentVertices(currentVertexId)) {
                     int newInDegree = currentInDegrees.get(dependentVertexId) - 1;
                     currentInDegrees.put(dependentVertexId, newInDegree);
 
-                    if (newInDegree == 0) {
+                    if (newInDegree == 0 && !processedScripts.contains(dependentVertexId)) {
                         readyScripts.offer(graph.getVertex(dependentVertexId));
                     }
                 }
@@ -64,7 +65,7 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
 
 
     @Override
-    public void addScript(ExecutionPlan plan, VulnerabilityScript script) {
+    public void addScript(@NonNull ExecutionPlan plan, @NonNull VulnerabilityScript script) {
         List<ExecutionPlan.ExecutionWave> waves = plan.waves();
         List<Integer> dependencies = script.getDependencies() == null ? Collections.emptyList() : script.getDependencies();
 
@@ -80,10 +81,10 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
             }
         }
 
-        //wave exists, script must appear in next wave
+        //wave exists, script must appear in next available wave
         if (targetWaveIndex != -1) targetWaveIndex++;
 
-        //find available wave
+        //find next available wave
         while (targetWaveIndex < waves.size() && targetWaveIndex >= 0) {
             if (waves.get(targetWaveIndex).scripts().size() < plannerConfig.maxParallelExecutions()) {
                 break;
@@ -91,6 +92,7 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
             targetWaveIndex++;
         }
 
+        //insert script in wave or create a new one
         if (targetWaveIndex < waves.size() && targetWaveIndex >= 0) {
             waves.get(targetWaveIndex).scripts().add(script);
         } else {

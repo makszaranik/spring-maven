@@ -7,6 +7,7 @@ import org.example.config.PlannerConfig;
 import org.example.config.SimulationConfig;
 import org.example.domain.VulnerabilityScript;
 import org.example.execution.plan.ExecutionPlan;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -21,7 +22,7 @@ public class ParallelExecutionSimulator implements ExecutionSimulator {
 
     @Override
     @SneakyThrows
-    public SimulationReport simulate(ExecutionPlan plan, Collection<VulnerabilityScript> scripts) {
+    public @NonNull SimulationReport simulate(@NonNull ExecutionPlan plan, @NonNull Collection<VulnerabilityScript> scripts) {
         List<Integer> failedScripts = Collections.synchronizedList(new ArrayList<>());
         List<Integer> successfulCompletedScripts = Collections.synchronizedList(new ArrayList<>());
         Map<Integer, Integer> retryStatistics = new ConcurrentHashMap<>();

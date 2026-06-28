@@ -12,7 +12,10 @@ import org.example.graph.DependencyGraph;
 import org.example.graph.DependencyGraphUtils;
 import org.example.validation.ValidationContext;
 import org.example.validation.ValidationResult;
+import org.example.validation.chain.AfterPlanValidationChain;
+import org.example.validation.chain.BeforePlanValidationChain;
 import org.example.validation.chain.ValidationChain;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -25,17 +28,18 @@ public class DefaultScriptExecutor implements ScriptExecutor {
 
     private final ExecutionPlanner executionPlanner;
     private final ExecutionSimulator executionSimulator;
-    private final ValidationChain validationChain;
+    private final BeforePlanValidationChain beforePlanValidationChain;
+    private final AfterPlanValidationChain afterPlanValidationChain;
     private final PlannerConfig plannerConfig;
 
     @Override
-    public SimulationReport executeScripts(Collection<VulnerabilityScript> scripts) {
+    public @NonNull SimulationReport executeScripts(@NonNull Collection<VulnerabilityScript> scripts) {
         ExecutionPlan executionPlan = executionPlanner.createPlan(scripts);
         return executionSimulator.simulate(executionPlan, scripts);
     }
 
     @Override
-    public PlanAnalysis analyze(ExecutionPlan plan) {
+    public @NonNull PlanAnalysis analyze(@NonNull ExecutionPlan plan) {
         List<VulnerabilityScript> allScripts = plan.waves().stream()
             .flatMap(w -> w.scripts().stream())
             .toList();
@@ -48,9 +52,7 @@ public class DefaultScriptExecutor implements ScriptExecutor {
         int totalWaves = plan.waves().size();
         double avgParallelism = totalWaves == 0 ? 0 : (double) totalScripts / totalWaves;
 
-        int maxParallelism = plan.waves().stream()
-            .mapToInt(w -> w.scripts().size())
-            .max().orElse(0);
+        int maxParallelism = plan.waves().stream().mapToInt(w -> w.scripts().size()).max().orElse(0);
 
         int maxLimit = plannerConfig.maxParallelExecutions();
         double efficiency = (totalWaves == 0 || maxLimit == 0) ? 0 : (double) totalScripts / (totalWaves * maxLimit);
@@ -69,7 +71,7 @@ public class DefaultScriptExecutor implements ScriptExecutor {
     }
 
     @Override
-    public ValidationResult validate(ExecutionPlan plan) {
+    public @NonNull ValidationResult validate(@NonNull ExecutionPlan plan) {
         List<VulnerabilityScript> scripts = plan.waves().stream()
             .flatMap(executionWave -> executionWave.scripts().stream())
             .toList();
@@ -80,9 +82,9 @@ public class DefaultScriptExecutor implements ScriptExecutor {
             .errors(new ArrayList<>())
             .build();
 
-        validationChain.startBeforeChain(context);
+        beforePlanValidationChain.startChain(context);
         ExecutionPlan executionPlan = executionPlanner.createPlan(scripts);
-        validationChain.startAfterChain(context, executionPlan);
+        afterPlanValidationChain.startChain(context, executionPlan);
 
         return ValidationResult.builder()
             .warnings(context.warnings())

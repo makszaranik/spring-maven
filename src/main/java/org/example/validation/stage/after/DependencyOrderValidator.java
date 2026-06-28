@@ -1,10 +1,11 @@
-package org.example.validation.stage.afterPlan;
+package org.example.validation.stage.after;
 
 import org.example.domain.VulnerabilityScript;
 import org.example.execution.plan.ExecutionPlan;
 import org.example.validation.ValidationContext;
 import org.example.validation.chain.ValidationChain;
 import org.example.validation.stage.ValidatorStage;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
@@ -15,7 +16,7 @@ import java.util.Set;
 public class DependencyOrderValidator implements ValidatorStage {
 
     @Override
-    public void executeValidationAfterPlan(ValidationContext context, ValidationChain chain, ExecutionPlan plan) {
+    public void executeValidationAfterPlan(@NonNull ValidationContext context, @NonNull ValidationChain chain, @NonNull ExecutionPlan plan) {
 
         Set<Integer> completedScripts = new HashSet<>();
 
@@ -37,6 +38,7 @@ public class DependencyOrderValidator implements ValidatorStage {
 
             wave.scripts().forEach(s -> completedScripts.add(s.getScriptId()));
         }
-        chain.doNextAfter(context, plan);
+
+        chain.doNext(chain, context, plan);
     }
 }

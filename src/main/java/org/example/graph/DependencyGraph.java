@@ -1,6 +1,8 @@
 package org.example.graph;
 
 import org.example.domain.VulnerabilityScript;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -8,9 +10,9 @@ public class DependencyGraph {
 
     private final Map<Integer, List<Integer>> adjacencyList = new HashMap<>();
     private final Map<Integer, VulnerabilityScript> vertices = new HashMap<>();
-    private final Map<Integer, Integer> inDegrees = new HashMap<>();
+    private final Map<Integer, Integer> inDegrees = new TreeMap<>();
 
-    public static DependencyGraph buildGraph(Collection<VulnerabilityScript> scripts) {
+    public static @NonNull DependencyGraph buildGraph(@NonNull Collection<VulnerabilityScript> scripts) {
         DependencyGraph graph = new DependencyGraph();
 
         for (VulnerabilityScript script : scripts) {
@@ -46,15 +48,15 @@ public class DependencyGraph {
         inDegrees.putIfAbsent(scriptId, 0);
     }
 
-    public List<Integer> getAdjacentVertices(int vertexId) {
+    public @NonNull List<Integer> getAdjacentVertices(int vertexId) {
         return adjacencyList.getOrDefault(vertexId, Collections.emptyList());
     }
 
-    public VulnerabilityScript getVertex(int vertexId) {
+    public @Nullable VulnerabilityScript getVertex(int vertexId) {
         return vertices.get(vertexId);
     }
 
-    public Set<Integer> getAllVertexIds() {
+    public @NonNull Set<Integer> getAllVertexIds() {
         return vertices.keySet();
     }
 

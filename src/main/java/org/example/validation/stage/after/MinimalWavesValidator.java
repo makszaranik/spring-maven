@@ -1,4 +1,4 @@
-package org.example.validation.stage.afterPlan;
+package org.example.validation.stage.after;
 
 import lombok.RequiredArgsConstructor;
 import org.example.config.PlannerConfig;
@@ -7,6 +7,7 @@ import org.example.execution.plan.ExecutionPlan;
 import org.example.validation.ValidationContext;
 import org.example.validation.chain.ValidationChain;
 import org.example.validation.stage.ValidatorStage;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
@@ -20,7 +21,7 @@ public class MinimalWavesValidator implements ValidatorStage {
     private final PlannerConfig plannerConfig;
 
     @Override
-    public void executeValidationAfterPlan(ValidationContext context, ValidationChain chain, ExecutionPlan plan) {
+    public void executeValidationAfterPlan(@NonNull ValidationContext context, @NonNull ValidationChain chain, @NonNull ExecutionPlan plan) {
 
         List<ExecutionPlan.ExecutionWave> waves = plan.waves();
         int maxLimit = plannerConfig.maxParallelExecutions();
@@ -55,6 +56,6 @@ public class MinimalWavesValidator implements ValidatorStage {
                 completedBeforeCurrentWave.add(s.getScriptId());
             }
         }
-        chain.doNextAfter(context, plan);
+        chain.doNext(chain, context, plan);
     }
 }

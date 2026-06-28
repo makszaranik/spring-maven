@@ -4,16 +4,16 @@ import org.example.domain.VulnerabilityScript;
 import org.example.execution.plan.ExecutionPlan;
 import org.example.execution.plan.PlanAnalysis;
 import org.example.execution.simulation.SimulationReport;
-import org.example.validation.ValidationContext;
 import org.example.validation.ValidationResult;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 
 public interface ScriptExecutor {
 
-    SimulationReport executeScripts(Collection<VulnerabilityScript> scripts);
+    @NonNull SimulationReport executeScripts(@NonNull Collection<VulnerabilityScript> scripts);
 
-    PlanAnalysis analyze(ExecutionPlan plan);
+    @NonNull PlanAnalysis analyze(@NonNull ExecutionPlan plan);
 
-    ValidationResult validate(ExecutionPlan plan);
+    @NonNull ValidationResult validate(@NonNull ExecutionPlan plan);
 }

@@ -1,7 +1,6 @@
 package org.example.validation.chain;
 
 import lombok.RequiredArgsConstructor;
-import org.example.execution.plan.ExecutionPlan;
 import org.example.validation.ValidationContext;
 import org.example.validation.stage.ValidatorStage;
 import org.jspecify.annotations.NonNull;
@@ -14,18 +13,18 @@ import java.util.List;
 public class BeforePlanValidationChain implements ValidationChain {
 
     private final List<ValidatorStage> validatorStages;
-    private final ThreadLocal<Integer> currentPositionAfter = ThreadLocal.withInitial(() -> 0);
+    private final ThreadLocal<Integer> currentPositionBefore = ThreadLocal.withInitial(() -> 0);
 
     public void startChain(@NonNull ValidationContext context) {
-        currentPositionAfter.set(0);
+        currentPositionBefore.set(0);
         this.doNext(this, context);
     }
 
     @Override
     public void doNext(@NonNull ValidationChain chain, @NonNull ValidationContext context) {
-        if (context.isCanProceed() && currentPositionAfter.get() < validatorStages.size()) {
-            ValidatorStage nextStage = validatorStages.get(currentPositionAfter.get());
-            currentPositionAfter.set(currentPositionAfter.get() + 1);
+        if (currentPositionBefore.get() < validatorStages.size()) {
+            ValidatorStage nextStage = validatorStages.get(currentPositionBefore.get());
+            currentPositionBefore.set(currentPositionBefore.get() + 1);
             nextStage.executeValidationBeforePlan(context, this);
         }
     }

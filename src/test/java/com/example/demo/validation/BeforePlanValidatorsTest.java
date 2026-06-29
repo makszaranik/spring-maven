@@ -1,4 +1,5 @@
 package com.example.demo.validation;
+
 import org.example.domain.VulnerabilityScript;
 import org.example.validation.ValidationContext;
 import org.example.validation.chain.BeforePlanValidationChain;
@@ -19,10 +20,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = {
     BeforePlanValidationChain.class,
-    CircularDependencyValidator.class,
     DuplicateDependencyValidator.class,
+    SelfDependencyValidator.class,
     MissingDependencyValidator.class,
-    SelfDependencyValidator.class
+    CircularDependencyValidator.class
 })
 public class BeforePlanValidatorsTest {
 
@@ -30,14 +31,6 @@ public class BeforePlanValidatorsTest {
     private BeforePlanValidationChain validationChain;
 
     private ValidationContext context;
-
-    @BeforeEach
-    void setUp() {
-        context = ValidationContext.builder()
-            .warnings(new ArrayList<>())
-            .errors(new ArrayList<>())
-            .build();
-    }
 
     private VulnerabilityScript createScript(int id, Integer... deps) {
         return VulnerabilityScript.builder()
@@ -50,95 +43,79 @@ public class BeforePlanValidatorsTest {
 
     @Test
     void shouldPassWhenDataIsCorrect() {
-
-        //given
-        List<VulnerabilityScript> scripts = List.of(
+        List<VulnerabilityScript> scripts = new ArrayList<>(List.of(
             createScript(1),
             createScript(2, 1)
-        );
+        ));
 
-        //when
         context = new ValidationContext(scripts, new ArrayList<>(), new ArrayList<>());
         validationChain.startChain(context);
 
-        //then
-        assertTrue(context.isCanProceed());
         assertTrue(context.errors().isEmpty());
         assertTrue(context.warnings().isEmpty());
+        assertEquals(2, context.validScripts().size());
     }
 
     @Test
-    void shouldAddErrorWhenCycleDetected() {
-
-        //given
-        List<VulnerabilityScript> scripts = List.of(
+    void shouldRemoveCycleAndTransitiveDependenciesButKeepValidScripts() {
+        List<VulnerabilityScript> scripts = new ArrayList<>(List.of(
             createScript(1, 2),
-            createScript(2, 1)
-        );
+            createScript(2, 1),
+            createScript(3, 1),
+            createScript(4)
+        ));
 
-        //when
         context = new ValidationContext(scripts, new ArrayList<>(), new ArrayList<>());
         validationChain.startChain(context);
 
-        //then
-        assertFalse(context.isCanProceed());
         assertEquals(1, context.errors().size());
-        assertTrue(context.errors().getFirst().contains("The execution graph contains an unresolvable cycle:"));
+        assertEquals(2, context.validScripts().size());
+        assertEquals(3, context.validScripts().getFirst().getScriptId());
     }
 
     @Test
-    void shouldAddErrorWhenDependencyIsMissing() {
+    void shouldRemoveMissingAndTransitiveDependenciesButKeepValidScripts() {
+        List<VulnerabilityScript> scripts = new ArrayList<>(List.of(
+            createScript(1, 99),
+            createScript(2, 1),
+            createScript(3)
+        ));
 
-        //given
-        List<VulnerabilityScript> scripts = List.of(
-            createScript(1, 99)
-        );
-
-        //when
         context = new ValidationContext(scripts, new ArrayList<>(), new ArrayList<>());
         validationChain.startChain(context);
 
-        //then
-        assertFalse(context.isCanProceed());
-        assertTrue(context.errors().getFirst().contains("contains missing dependency: 99"));
+        assertEquals(2, context.errors().size());
+        assertEquals(1, context.validScripts().size());
+        assertEquals(3, context.validScripts().getFirst().getScriptId());
     }
 
     @Test
-    void shouldAddWarningWhenDuplicateDependency() {
-
-        //given
-        List<VulnerabilityScript> scripts = List.of(
-            createScript(2),
-            createScript(1, 2, 2)
-        );
-
-        //when
-        context = new ValidationContext(scripts, new ArrayList<>(), new ArrayList<>());
-        validationChain.startChain(context);
-
-        //then
-        assertTrue(context.isCanProceed());
-        assertEquals(1, context.warnings().size());
-        assertTrue(context.warnings().getFirst().contains("contains duplicated dependencies"));
-        assertEquals(1, scripts.get(1).getDependencies().size(), "Duplicate should be removed");
-    }
-
-
-    @Test
-    void shouldAddWarningWhenSelfDependency() {
-
-        //given
-        List<VulnerabilityScript> scripts = List.of(
+    void shouldDowngradeSelfDependencyToWarningAndFixIt() {
+        List<VulnerabilityScript> scripts = new ArrayList<>(List.of(
             createScript(1, 1)
-        );
+        ));
 
-        //when
         context = new ValidationContext(scripts, new ArrayList<>(), new ArrayList<>());
         validationChain.startChain(context);
 
-        //then
+        assertTrue(context.errors().isEmpty());
         assertEquals(1, context.warnings().size());
-        assertTrue(context.warnings().getFirst().contains("depends on itself"));
+        assertEquals(1, context.validScripts().size());
+        assertTrue(context.validScripts().getFirst().getDependencies().isEmpty());
     }
 
+    @Test
+    void shouldAddWarningWhenDuplicateDependencyAndFixIt() {
+        List<VulnerabilityScript> scripts = new ArrayList<>(List.of(
+            createScript(1),
+            createScript(2, 1, 1)
+        ));
+
+        context = new ValidationContext(scripts, new ArrayList<>(), new ArrayList<>());
+        validationChain.startChain(context);
+
+        assertEquals(1, context.warnings().size());
+        assertEquals(2, context.validScripts().size());
+        assertEquals(1, context.validScripts().get(1).getDependencies().size());
+    }
 }

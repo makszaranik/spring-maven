@@ -9,3 +9,6 @@
 1782716182095:executor run --source ./src/resources/scripts.json
 1782716219307:executor run --source ~/src/resources/scripts.json
 1782716244425:executor run --source src/main/resources/scripts.json
+1782727404667:executor run --source
+1782727448612:executor run --source /src/main/resources/scripts.json
+1782727455321:executor run --source src/main/resources/scripts.json

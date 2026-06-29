@@ -35,7 +35,7 @@ public class DependencyGraph {
 
     public void addEdge(int parentId, int childId) {
         if (!vertices.containsKey(parentId) || !vertices.containsKey(childId)) {
-            throw new IllegalArgumentException("Vertex not found");
+            return;
         }
         adjacencyList.get(parentId).add(childId);
         inDegrees.put(childId, inDegrees.get(childId) + 1);

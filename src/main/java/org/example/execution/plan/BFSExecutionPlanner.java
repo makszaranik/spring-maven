@@ -74,7 +74,9 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
         //script should appear in at least (maximal + 1) wave of all script dependencies
         for (int i = 0; i < waves.size(); i++) {
             ExecutionPlan.ExecutionWave currentWave = waves.get(i);
-            boolean containsDependencyInWave = currentWave.scripts().stream().anyMatch(dependencies::contains);
+            boolean containsDependencyInWave = currentWave.scripts().stream()
+                .map(VulnerabilityScript::getScriptId)
+                .anyMatch(dependencies::contains);
 
             if (containsDependencyInWave) {
                 targetWaveIndex = Math.max(targetWaveIndex, i);

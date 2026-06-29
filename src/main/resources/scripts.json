@@ -1,7 +1,7 @@
 [
   {
     "scriptId": 1,
-    "dependencies": [],
+    "dependencies": [90],
     "estimatedDurationSeconds": 15,
     "priority": "LOW"
   },

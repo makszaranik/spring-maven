@@ -7,7 +7,7 @@ import java.util.List;
 
 @Builder
 public record ValidationContext(
-    List<VulnerabilityScript> scripts,
+    List<VulnerabilityScript> validScripts,
     List<String> warnings,
     List<String> errors
 ) {

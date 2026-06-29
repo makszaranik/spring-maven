@@ -1,6 +1,7 @@
 package org.example.execution.executor;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.config.PlannerConfig;
 import org.example.domain.VulnerabilityScript;
 import org.example.execution.plan.ExecutionPlan;
@@ -14,7 +15,6 @@ import org.example.validation.ValidationContext;
 import org.example.validation.ValidationResult;
 import org.example.validation.chain.AfterPlanValidationChain;
 import org.example.validation.chain.BeforePlanValidationChain;
-import org.example.validation.chain.ValidationChain;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class DefaultScriptExecutor implements ScriptExecutor {
@@ -33,21 +34,17 @@ public class DefaultScriptExecutor implements ScriptExecutor {
     private final PlannerConfig plannerConfig;
 
     @Override
-    public @NonNull SimulationReport executeScripts(@NonNull Collection<VulnerabilityScript> scripts, @NonNull ExecutionPlan executionPlan) {
-        return executionSimulator.simulate(executionPlan, scripts);
+    public @NonNull SimulationReport executeScripts(@NonNull ExecutionPlan executionPlan) {
+        return executionSimulator.simulate(executionPlan);
     }
 
     @Override
-    public @NonNull PlanAnalysis analyze(@NonNull ExecutionPlan plan) {
-        List<VulnerabilityScript> allScripts = plan.waves().stream()
-            .flatMap(w -> w.scripts().stream())
-            .toList();
-
-        DependencyGraph graph = DependencyGraph.buildGraph(allScripts);
+    public @NonNull PlanAnalysis analyze(@NonNull Collection<@NonNull VulnerabilityScript> scripts, @NonNull ExecutionPlan plan) {
+        DependencyGraph graph = DependencyGraph.buildGraph(scripts);
         List<List<Integer>> cycles = DependencyGraphUtils.findAllCycles(graph);
         DependencyGraphUtils.CriticalPath criticalPath = DependencyGraphUtils.calculateCriticalPath(graph);
 
-        int totalScripts = allScripts.size();
+        int totalScripts = scripts.size();
         int totalWaves = plan.waves().size();
 
         double avgParallelism = calculateAvgParallelism(totalWaves, totalScripts);
@@ -69,23 +66,24 @@ public class DefaultScriptExecutor implements ScriptExecutor {
     }
 
     @Override
-    public @NonNull ValidationResult validate(@NonNull ExecutionPlan plan) {
-        List<VulnerabilityScript> scripts = plan.waves().stream()
-            .flatMap(executionWave -> executionWave.scripts().stream())
-            .toList();
-
+    public @NonNull ValidationResult validate(@NonNull Collection<@NonNull VulnerabilityScript> scripts) {
         ValidationContext context = ValidationContext.builder()
-            .scripts(scripts)
+            .validScripts(new ArrayList<>(scripts))
             .warnings(new ArrayList<>())
             .errors(new ArrayList<>())
             .build();
 
         beforePlanValidationChain.startChain(context);
-        afterPlanValidationChain.startChain(context, plan);
+        ExecutionPlan executionPlan = executionPlanner.createPlan(context.validScripts());
+        afterPlanValidationChain.startChain(context, executionPlan);
+
+        log.info("valid scripts: {}", context.validScripts());
 
         return ValidationResult.builder()
             .warnings(context.warnings())
             .errors(context.errors())
+            .validScripts(context.validScripts())
+            .executionPlan(executionPlan)
             .build();
     }
 

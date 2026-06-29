@@ -23,7 +23,7 @@ public class AfterPlanValidationChain implements ValidationChain {
 
     @Override
     public void doNext(@NonNull ValidationChain chain, @NonNull ValidationContext context, @NonNull ExecutionPlan plan) {
-        if (context.isCanProceed() && currentPositionAfter.get() < validatorStages.size()) {
+        if (currentPositionAfter.get() < validatorStages.size()) {
             ValidatorStage nextStage = validatorStages.get(currentPositionAfter.get());
             currentPositionAfter.set(currentPositionAfter.get() + 1);
             nextStage.executeValidationAfterPlan(context, this, plan);

@@ -1,17 +1,22 @@
 package org.example.validation.stage.after;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.domain.VulnerabilityScript;
 import org.example.execution.plan.ExecutionPlan;
 import org.example.validation.ValidationContext;
 import org.example.validation.chain.ValidationChain;
 import org.example.validation.stage.ValidatorStage;
 import org.jspecify.annotations.NonNull;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+
+@Slf4j
+@Order(6)
 @Component
 public class DependencyOrderValidator implements ValidatorStage {
 
@@ -28,10 +33,8 @@ public class DependencyOrderValidator implements ValidatorStage {
 
                 if (dependencies != null && !dependencies.isEmpty()) {
                     if (!completedScripts.containsAll(dependencies)) {
-                        context.addErrorLog(
-                            String.format("Script %d in wave %d is scheduled before its dependencies %s.",
-                            script.getScriptId(), i, dependencies)
-                        );
+                        log.info("Script {} in wave {} is scheduled before its dependencies {}.", script.getScriptId(), i, dependencies);
+                        context.addErrorLog(String.format("Script %d in wave %d is scheduled before its dependencies %s.", script.getScriptId(), i, dependencies));
                     }
                 }
             }
@@ -39,6 +42,7 @@ public class DependencyOrderValidator implements ValidatorStage {
             wave.scripts().forEach(s -> completedScripts.add(s.getScriptId()));
         }
 
+        log.info("DependencyOrderValidator");
         chain.doNext(chain, context, plan);
     }
 }

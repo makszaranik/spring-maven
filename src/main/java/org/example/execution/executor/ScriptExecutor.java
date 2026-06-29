@@ -11,9 +11,9 @@ import java.util.Collection;
 
 public interface ScriptExecutor {
 
-    @NonNull SimulationReport executeScripts(@NonNull Collection<VulnerabilityScript> scripts, @NonNull ExecutionPlan executionPlan);
+    @NonNull SimulationReport executeScripts(@NonNull ExecutionPlan executionPlan);
 
-    @NonNull PlanAnalysis analyze(@NonNull ExecutionPlan plan);
+    @NonNull PlanAnalysis analyze(@NonNull Collection<@NonNull VulnerabilityScript> scripts, @NonNull ExecutionPlan plan);
 
-    @NonNull ValidationResult validate(@NonNull ExecutionPlan plan);
+    @NonNull ValidationResult validate(@NonNull Collection<@NonNull VulnerabilityScript> scripts);
 }

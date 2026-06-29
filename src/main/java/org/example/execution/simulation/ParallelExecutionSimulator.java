@@ -22,7 +22,7 @@ public class ParallelExecutionSimulator implements ExecutionSimulator {
 
     @Override
     @SneakyThrows
-    public @NonNull SimulationReport simulate(@NonNull ExecutionPlan plan, @NonNull Collection<VulnerabilityScript> scripts) {
+    public @NonNull SimulationReport simulate(@NonNull ExecutionPlan plan) {
         List<Integer> failedScripts = Collections.synchronizedList(new ArrayList<>());
         List<Integer> successfulCompletedScripts = Collections.synchronizedList(new ArrayList<>());
         Map<Integer, Integer> retryStatistics = new ConcurrentHashMap<>();

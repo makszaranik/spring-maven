@@ -17,7 +17,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
-
 @SpringBootTest(classes = {
     BFSExecutionPlanner.class,
     org.example.sheduling.BaseSchedulingOrderStrategy.class
@@ -39,38 +38,26 @@ class BFSExecutionPlannerTest {
             .build();
     }
 
-
     @Test
     void shouldPlanSimpleDagCorrectly() {
-
-        //given
         when(plannerConfig.maxParallelExecutions()).thenReturn(2);
-
         List<VulnerabilityScript> scripts = List.of(
             createScript(1, VulnerabilityScript.Priority.MEDIUM, 10),
             createScript(2, VulnerabilityScript.Priority.MEDIUM, 10, 1),
             createScript(3, VulnerabilityScript.Priority.MEDIUM, 10, 2)
         );
 
-        //when
         ExecutionPlan executionPlan = executionPlanner.createPlan(scripts);
 
-        System.out.println(executionPlan);
-
-        //expected
         assertEquals(3, executionPlan.waves().size());
         assertEquals(1, executionPlan.waves().getFirst().scripts().getFirst().getScriptId());
         assertEquals(2, executionPlan.waves().get(1).scripts().getFirst().getScriptId());
         assertEquals(3, executionPlan.waves().get(2).scripts().getFirst().getScriptId());
-
     }
 
     @Test
     void shouldRespectParallelismLimits() {
-
-        //given
         when(plannerConfig.maxParallelExecutions()).thenReturn(2);
-
         List<VulnerabilityScript> scripts = List.of(
             createScript(1, VulnerabilityScript.Priority.MEDIUM, 1),
             createScript(2, VulnerabilityScript.Priority.MEDIUM, 1),
@@ -78,10 +65,8 @@ class BFSExecutionPlannerTest {
             createScript(4, VulnerabilityScript.Priority.MEDIUM, 1)
         );
 
-        //when
         ExecutionPlan plan = executionPlanner.createPlan(scripts);
 
-        //expected
         assertEquals(2, plan.waves().size());
         assertEquals(2, plan.waves().get(0).scripts().size());
         assertEquals(2, plan.waves().get(1).scripts().size());
@@ -89,8 +74,6 @@ class BFSExecutionPlannerTest {
 
     @Test
     void shouldRespectPriorityScheduling() {
-
-        //given
         when(plannerConfig.maxParallelExecutions()).thenReturn(3);
         List<VulnerabilityScript> scripts = List.of(
             createScript(0, VulnerabilityScript.Priority.MEDIUM, 10),
@@ -99,10 +82,8 @@ class BFSExecutionPlannerTest {
             createScript(3, VulnerabilityScript.Priority.MEDIUM, 50, 0)
         );
 
-        //when
         ExecutionPlan executionPlan = executionPlanner.createPlan(scripts);
 
-        //expected
         assertEquals(2, executionPlan.waves().size());
         assertEquals(0, executionPlan.waves().getFirst().scripts().getFirst().getScriptId());
         assertEquals(1, executionPlan.waves().get(1).scripts().getFirst().getScriptId());
@@ -112,10 +93,7 @@ class BFSExecutionPlannerTest {
 
     @Test
     void shouldPlanWideDependencyGraphWithLimits() {
-
-        //given
         when(plannerConfig.maxParallelExecutions()).thenReturn(5);
-
         List<VulnerabilityScript> scripts = new ArrayList<>();
         scripts.add(createScript(0, VulnerabilityScript.Priority.MEDIUM, 10));
 
@@ -128,36 +106,23 @@ class BFSExecutionPlannerTest {
             lastScriptDeps.add(i);
         }
 
-        VulnerabilityScript lastScript = createScript(
-            99, VulnerabilityScript.Priority.MEDIUM,
-            10, lastScriptDeps.toArray(new Integer[0])
-        );
+        scripts.add(createScript(99, VulnerabilityScript.Priority.MEDIUM, 10, lastScriptDeps.toArray(new Integer[0])));
 
-        scripts.add(lastScript);
-
-        //when
         ExecutionPlan executionPlan = executionPlanner.createPlan(scripts);
 
-        //expected
-        assertEquals(4, executionPlan.waves().size(), "should be 4 waves");
-
-        assertEquals(1, executionPlan.waves().get(0).scripts().size(), "should be 1 script");
-        assertEquals(5, executionPlan.waves().get(1).scripts().size(), "should be 5 script");
-        assertEquals(5, executionPlan.waves().get(2).scripts().size(), "should be 5 script");
-        assertEquals(1, executionPlan.waves().get(3).scripts().size(), "should be 1 script");
-
+        assertEquals(4, executionPlan.waves().size());
+        assertEquals(1, executionPlan.waves().get(0).scripts().size());
+        assertEquals(5, executionPlan.waves().get(1).scripts().size());
+        assertEquals(5, executionPlan.waves().get(2).scripts().size());
+        assertEquals(1, executionPlan.waves().get(3).scripts().size());
         assertEquals(0, executionPlan.waves().get(0).scripts().getFirst().getScriptId());
         assertEquals(99, executionPlan.waves().get(3).scripts().getFirst().getScriptId());
     }
 
-
     @Test
     void shouldHandleMassiveDataset() {
-
-        //given
         PlannerConfig config = new PlannerConfig(100);
         BFSExecutionPlanner fastPlanner = new BFSExecutionPlanner(new BaseSchedulingOrderStrategy(), config);
-
         int scriptCount = 1_000_000;
         List<VulnerabilityScript> scripts = new ArrayList<>(scriptCount);
 
@@ -171,14 +136,33 @@ class BFSExecutionPlannerTest {
                 .build());
         }
 
-        //when
         assertTimeoutPreemptively(java.time.Duration.ofSeconds(10), () -> {
             ExecutionPlan plan = fastPlanner.createPlan(scripts);
-
-            //expected
             assertNotNull(plan);
             assertEquals(scriptCount, plan.waves().size());
         });
     }
 
+    @Test
+    void shouldHandleIncrementalReplanning() {
+        when(plannerConfig.maxParallelExecutions()).thenReturn(5);
+        List<VulnerabilityScript> existingScripts = new ArrayList<>(List.of(
+            createScript(1, VulnerabilityScript.Priority.MEDIUM, 10),
+            createScript(2, VulnerabilityScript.Priority.MEDIUM, 10, 1)
+        ));
+
+        ExecutionPlan initialPlan = executionPlanner.createPlan(existingScripts);
+
+        assertEquals(2, initialPlan.waves().size());
+
+        VulnerabilityScript newScript = createScript(3, VulnerabilityScript.Priority.HIGH, 10, 2);
+        existingScripts.add(newScript);
+
+        ExecutionPlan updatedPlan = executionPlanner.createPlan(existingScripts);
+
+        assertEquals(3, updatedPlan.waves().size());
+        assertEquals(1, updatedPlan.waves().get(0).scripts().getFirst().getScriptId());
+        assertEquals(2, updatedPlan.waves().get(1).scripts().getFirst().getScriptId());
+        assertEquals(3, updatedPlan.waves().get(2).scripts().getFirst().getScriptId());
+    }
 }

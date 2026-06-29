@@ -33,8 +33,7 @@ public class DefaultScriptExecutor implements ScriptExecutor {
     private final PlannerConfig plannerConfig;
 
     @Override
-    public @NonNull SimulationReport executeScripts(@NonNull Collection<VulnerabilityScript> scripts) {
-        ExecutionPlan executionPlan = executionPlanner.createPlan(scripts);
+    public @NonNull SimulationReport executeScripts(@NonNull Collection<VulnerabilityScript> scripts, @NonNull ExecutionPlan executionPlan) {
         return executionSimulator.simulate(executionPlan, scripts);
     }
 
@@ -82,8 +81,7 @@ public class DefaultScriptExecutor implements ScriptExecutor {
             .build();
 
         beforePlanValidationChain.startChain(context);
-        ExecutionPlan executionPlan = executionPlanner.createPlan(scripts);
-        afterPlanValidationChain.startChain(context, executionPlan);
+        afterPlanValidationChain.startChain(context, plan);
 
         return ValidationResult.builder()
             .warnings(context.warnings())

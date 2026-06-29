@@ -25,7 +25,7 @@
   },
   {
     "scriptId": 5,
-    "dependencies": null,
+    "dependencies": [],
     "estimatedDurationSeconds": 10,
     "priority": "LOW"
   }

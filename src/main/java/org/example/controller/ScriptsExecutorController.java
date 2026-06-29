@@ -4,6 +4,9 @@ package org.example.controller;
 import lombok.RequiredArgsConstructor;
 import org.example.domain.VulnerabilityScript;
 import org.example.execution.executor.ScriptExecutor;
+import org.example.execution.plan.ExecutionPlan;
+import org.example.execution.plan.ExecutionPlanner;
+import org.example.execution.plan.PlanAnalysis;
 import org.example.execution.simulation.SimulationReport;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
@@ -20,6 +23,7 @@ public class ScriptsExecutorController {
 
     private final ScriptExecutor scriptExecutor;
     private final ObjectMapper objectMapper;
+    private final ExecutionPlanner executionPlanner;
 
     @ShellMethod(key = "executor run")
     public String execute(@ShellOption(value = "--source") String scriptsSource) {
@@ -32,12 +36,15 @@ public class ScriptsExecutorController {
         try {
             List<VulnerabilityScript> scripts = objectMapper.readValue(scriptsFile, new TypeReference<>() {});
 
-            if (scripts == null || scripts.isEmpty()) {
+            if (scripts.isEmpty()) {
                 return "File is empty or contains no scripts.";
             }
 
-            SimulationReport result = scriptExecutor.executeScripts(scripts);
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(result);
+            ExecutionPlan executionPlan = executionPlanner.createPlan(scripts);
+            scriptExecutor.validate(executionPlan);
+            SimulationReport result = scriptExecutor.executeScripts(scripts, executionPlan);
+            PlanAnalysis planAnalysis = scriptExecutor.analyze(executionPlan);
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(planAnalysis);
 
         } catch (Exception e) {
             return "Error executing scripts: " + e.getMessage();

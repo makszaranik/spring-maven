@@ -19,7 +19,4 @@ public record ValidationContext(
         this.errors.add(message);
     }
 
-    public boolean isCanProceed() {
-        return this.errors.isEmpty();
-    }
 }

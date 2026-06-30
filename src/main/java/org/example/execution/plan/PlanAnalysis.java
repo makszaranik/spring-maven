@@ -12,6 +12,5 @@ public record PlanAnalysis(
     double averageParallelism,
     double efficiency,
     int criticalPathLength,
-    long estimatedExecutionTime,
-    List<List<Integer>> cycles
+    long estimatedExecutionTime
 ) {}

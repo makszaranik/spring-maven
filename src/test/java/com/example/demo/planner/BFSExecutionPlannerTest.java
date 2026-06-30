@@ -4,6 +4,8 @@ import org.example.config.PlannerConfig;
 import org.example.domain.VulnerabilityScript;
 import org.example.execution.plan.BFSExecutionPlanner;
 import org.example.execution.plan.ExecutionPlan;
+import org.example.graph.DependencyGraph;
+import org.example.graph.DependencyGraphUtils;
 import org.example.sheduling.BaseSchedulingOrderStrategy;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -135,7 +137,6 @@ class BFSExecutionPlannerTest {
                 .priority(VulnerabilityScript.Priority.MEDIUM)
                 .build());
         }
-
         assertTimeoutPreemptively(java.time.Duration.ofSeconds(10), () -> {
             ExecutionPlan plan = fastPlanner.createPlan(scripts);
             assertNotNull(plan);

@@ -9,46 +9,39 @@ import java.util.*;
 public class DependencyGraphUtils {
 
     public static @NonNull List<List<Integer>> findAllCycles(@NonNull DependencyGraph graph) {
-        List<List<Integer>> allCycles = new ArrayList<>();
-        Map<Integer, Integer> visited = new HashMap<>(); // 0 - not visited, 1 - processing, 2 - finished
-        List<Integer> currentPath = new ArrayList<>();
+        Map<Integer, Integer> inDegree = new HashMap<>();
+        Queue<Integer> queue = new LinkedList<>();
+        Set<Integer> processed = new HashSet<>();
 
         for (Integer vertex : graph.getAllVertexIds()) {
-            visited.put(vertex, 0);
-        }
-
-        for (Integer vertex : graph.getAllVertexIds()) {
-            if (visited.get(vertex) == 0) {
-                dfs(graph, vertex, visited, currentPath, allCycles);
+            int in = graph.getInDegree(vertex);
+            inDegree.put(vertex, in);
+            if (in == 0) {
+                queue.offer(vertex);
             }
         }
 
-        return allCycles;
-    }
+        while (!queue.isEmpty()) {
+            int u = queue.poll();
+            processed.add(u);
 
-
-    private static void dfs(@NonNull DependencyGraph graph, int v, @NonNull Map<Integer, Integer> visited,
-                            @NonNull List<Integer> currentPath, @NonNull List<List<Integer>> allCycles) {
-
-        visited.put(v, 1);
-        currentPath.add(v);
-
-        for (Integer to : graph.getAdjacentVertices(v)) {
-            int visitedState = visited.getOrDefault(to, 0);
-
-            if (visitedState == 0) {
-                dfs(graph, to, visited, currentPath, allCycles);
-            } else if (visitedState == 1) {
-                int cycleStartIndex = currentPath.indexOf(to);
-                List<Integer> cycle = new ArrayList<>(currentPath.subList(cycleStartIndex, currentPath.size()));
-                cycle.add(to);
-                allCycles.add(cycle);
+            for (Integer v : graph.getAdjacentVertices(u)) {
+                int currentInDegree = inDegree.get(v) - 1;
+                inDegree.put(v, currentInDegree);
+                if (currentInDegree == 0) {
+                    queue.offer(v);
+                }
             }
-
         }
 
-        visited.put(v, 2);
-        currentPath.removeLast();
+        List<Integer> cyclicNodes = new ArrayList<>();
+        for (Integer vertex : graph.getAllVertexIds()) {
+            if (!processed.contains(vertex)) {
+                cyclicNodes.add(vertex);
+            }
+        }
+
+        return cyclicNodes.isEmpty() ? Collections.emptyList() : List.of(cyclicNodes);
     }
 
     public static @NonNull CriticalPath calculateCriticalPath(@NonNull DependencyGraph graph) {
@@ -90,40 +83,59 @@ public class DependencyGraphUtils {
             ((double) maxPath.duration() / totalExecutionTimeAllScripts) * 100.0;
     }
 
-    private static @NonNull CriticalPath findLongestPath(@NonNull DependencyGraph graph, int currentVertex, @NonNull Map<Integer, CriticalPath> used) {
+    private static @NonNull CriticalPath findLongestPath(@NonNull DependencyGraph graph, int startVertex, @NonNull Map<Integer, CriticalPath> used) {
+        Deque<Integer> stack = new ArrayDeque<>();
+        stack.push(startVertex);
 
-        if (used.containsKey(currentVertex)) {
-            return used.get(currentVertex);
-        }
+        while (!stack.isEmpty()) {
+            int current = stack.peek();
 
-        VulnerabilityScript script = graph.getVertex(currentVertex);
-        int durationSeconds = script != null ? script.getEstimatedDurationSeconds() : 0;
-
-        CriticalPath bestChildPath = CriticalPath.builder()
-            .vertexes(Collections.emptyList())
-            .duration(0)
-            .build();
-
-        for (Integer child : graph.getAdjacentVertices(currentVertex)) {
-            CriticalPath childPath = findLongestPath(graph, child, used);
-            if (childPath.duration() > bestChildPath.duration()) {
-                bestChildPath = childPath;
+            if (used.containsKey(current)) {
+                stack.pop();
+                continue;
             }
+
+            boolean allChildrenProcessed = true;
+            for (Integer child : graph.getAdjacentVertices(current)) {
+                if (!used.containsKey(child)) {
+                    stack.push(child);
+                    allChildrenProcessed = false;
+                }
+            }
+
+            if (!allChildrenProcessed) {
+                continue;
+            }
+
+            stack.pop();
+
+            VulnerabilityScript script = graph.getVertex(current);
+            int durationSeconds = script != null ? script.getEstimatedDurationSeconds() : 0;
+
+            CriticalPath bestChildPath = CriticalPath.builder()
+                .vertexes(Collections.emptyList())
+                .duration(0)
+                .build();
+
+            for (Integer child : graph.getAdjacentVertices(current)) {
+                CriticalPath childPath = used.get(child);
+                if (childPath != null && childPath.duration() > bestChildPath.duration()) {
+                    bestChildPath = childPath;
+                }
+            }
+
+            List<Integer> combinedNodes = new ArrayList<>();
+            combinedNodes.add(current);
+            combinedNodes.addAll(bestChildPath.vertexes());
+
+            used.put(current, CriticalPath.builder()
+                .vertexes(combinedNodes)
+                .duration(durationSeconds + bestChildPath.duration())
+                .build());
         }
 
-        List<Integer> combinedNodes = new ArrayList<>();
-        combinedNodes.add(currentVertex);
-        combinedNodes.addAll(bestChildPath.vertexes());
-
-        CriticalPath result = CriticalPath.builder()
-            .vertexes(combinedNodes)
-            .duration(durationSeconds + bestChildPath.duration())
-            .build();
-
-        used.put(currentVertex, result);
-        return result;
+        return used.get(startVertex);
     }
-
 
     @Builder
     public record CriticalPath(

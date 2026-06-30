@@ -69,7 +69,8 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
         List<ExecutionPlan.ExecutionWave> waves = plan.waves();
         List<Integer> dependencies = script.getDependencies() == null ? Collections.emptyList() : script.getDependencies();
 
-        int targetWaveIndex = -1;
+        int targetWaveIndex = 0;
+        int maxDependencyWaveIndex = -1;
 
         //script should appear in at least (maximal + 1) wave of all script dependencies
         for (int i = 0; i < waves.size(); i++) {
@@ -79,15 +80,16 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
                 .anyMatch(dependencies::contains);
 
             if (containsDependencyInWave) {
-                targetWaveIndex = Math.max(targetWaveIndex, i);
+                maxDependencyWaveIndex = Math.max(maxDependencyWaveIndex, i);
             }
         }
 
-        //wave exists, script must appear in next available wave
-        if (targetWaveIndex != -1) targetWaveIndex++;
+        if (maxDependencyWaveIndex != -1) {
+            targetWaveIndex = maxDependencyWaveIndex + 1;
+        }
 
         //find next available wave
-        while (targetWaveIndex < waves.size() && targetWaveIndex >= 0) {
+        while (targetWaveIndex < waves.size()) {
             if (waves.get(targetWaveIndex).scripts().size() < plannerConfig.maxParallelExecutions()) {
                 break;
             }
@@ -95,8 +97,10 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
         }
 
         //insert script in wave or create a new one
-        if (targetWaveIndex < waves.size() && targetWaveIndex >= 0) {
-            waves.get(targetWaveIndex).scripts().add(script);
+        if (targetWaveIndex < waves.size()) {
+            List<VulnerabilityScript> updatedScripts = new ArrayList<>(waves.get(targetWaveIndex).scripts());
+            updatedScripts.add(script);
+            waves.set(targetWaveIndex, new ExecutionPlan.ExecutionWave(updatedScripts));
         } else {
             List<VulnerabilityScript> newWave = new ArrayList<>();
             newWave.add(script);

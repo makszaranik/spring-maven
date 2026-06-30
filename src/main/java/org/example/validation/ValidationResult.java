@@ -11,5 +11,5 @@ public record ValidationResult(
     List<String> warnings,
     List<String> errors,
     List<VulnerabilityScript> validScripts,
-    ExecutionPlan executionPlan
+    ExecutionPlan validExecutionPlan
 ) {}

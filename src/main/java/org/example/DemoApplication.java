@@ -4,10 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.domain.VulnerabilityScript;
 import org.example.execution.executor.ScriptExecutor;
 import org.example.execution.plan.ExecutionPlan;
-import org.example.execution.plan.ExecutionPlanner;
 import org.example.execution.plan.PlanAnalysis;
+import org.example.validation.ValidationContext;
 import org.example.validation.ValidationResult;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
@@ -28,32 +27,27 @@ public class DemoApplication {
 	public static void main(String[] args) {
 		ConfigurableApplicationContext context = SpringApplication.run(DemoApplication.class, args);
 
+		/*
 		ObjectMapper objectMapper = context.getBean(ObjectMapper.class);
 		ScriptExecutor scriptExecutor = context.getBean(ScriptExecutor.class);
-		ExecutionPlanner executionPlanner = context.getBean(ExecutionPlanner.class);
 
 		File scriptsFile = new File("src/main/resources/scripts.json");
 		List<VulnerabilityScript> scripts = objectMapper.readValue(scriptsFile, new TypeReference<>() {});
 
-		ValidationResult validationResult = scriptExecutor.validate(scripts);
-		ExecutionPlan executionPlan = validationResult.executionPlan();
-
-		/*
-		VulnerabilityScript script = VulnerabilityScript.builder()
-			.scriptId(6)
-			.dependencies(List.of(1, 5))
-			.priority(VulnerabilityScript.Priority.MEDIUM)
+		ValidationContext validationContext = ValidationContext.builder()
+			.validScripts(scripts)
+			.warnings(new ArrayList<>())
+			.errors(new ArrayList<>())
 			.build();
 
-		executionPlanner.addScript(executionPlan, script);
-		 */
+		ValidationResult validationResult = scriptExecutor.validate(scripts, validationContext);
+		scriptExecutor.executeScripts(validationResult.validExecutionPlan());
+		PlanAnalysis planAnalysis = scriptExecutor.analyze(validationResult.validScripts(), validationResult.validExecutionPlan());
 
-		scriptExecutor.executeScripts(executionPlan);
-		PlanAnalysis planAnalysis = scriptExecutor.analyze(validationResult.validScripts(), executionPlan);
-
-		log.info("waves: {}", executionPlan.waves());
+		log.info("waves: {}", validationResult.validExecutionPlan().waves());
 		log.info("plan {}", planAnalysis);
 
+		 */
 	}
 
 }

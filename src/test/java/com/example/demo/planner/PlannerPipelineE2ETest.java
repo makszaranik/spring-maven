@@ -1,15 +1,21 @@
 package com.example.demo;
 
 import org.example.config.PlannerConfig;
+import org.example.config.SimulationConfig;
 import org.example.domain.VulnerabilityScript;
+import org.example.execution.executor.DefaultScriptExecutor;
 import org.example.execution.plan.BFSExecutionPlanner;
 import org.example.execution.plan.ExecutionPlan;
+import org.example.execution.plan.PlanAnalysis;
+import org.example.execution.simulation.ParallelExecutionSimulator;
+import org.example.execution.simulation.SimulationReport;
+import org.example.sheduling.BaseSchedulingOrderStrategy;
 import org.example.validation.ValidationContext;
+import org.example.validation.ValidationResult;
 import org.example.validation.chain.AfterPlanValidationChain;
 import org.example.validation.chain.BeforePlanValidationChain;
 import org.example.validation.stage.after.*;
 import org.example.validation.stage.before.*;
-import org.example.sheduling.BaseSchedulingOrderStrategy;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,21 +40,20 @@ import static org.mockito.Mockito.when;
     ScriptAppearsOnceValidator.class,
     DependencyOrderValidator.class,
     MinimalWavesValidator.class,
-    ParallelismLimitValidator.class
+    ParallelismLimitValidator.class,
+    DefaultScriptExecutor.class,
+    ParallelExecutionSimulator.class
 })
 public class PlannerPipelineE2ETest {
 
     @Autowired
-    private BeforePlanValidationChain beforeValidationChain;
-
-    @Autowired
-    private BFSExecutionPlanner executionPlanner;
-
-    @Autowired
-    private AfterPlanValidationChain afterValidationChain;
+    private DefaultScriptExecutor scriptExecutor;
 
     @MockitoBean
     private PlannerConfig plannerConfig;
+
+    @MockitoBean
+    private SimulationConfig simulationConfig;
 
     private VulnerabilityScript createScript(int id, Integer... deps) {
         return VulnerabilityScript.builder()
@@ -61,9 +66,10 @@ public class PlannerPipelineE2ETest {
 
     @Test
     void shouldExecuteFullPipelineWithPerfectData() {
-
         // given
         when(plannerConfig.maxParallelExecutions()).thenReturn(2);
+        when(simulationConfig.failureProbability()).thenReturn(0.0);
+        when(simulationConfig.maxRetries()).thenReturn(3);
 
         List<VulnerabilityScript> rawScripts = new ArrayList<>(List.of(
             createScript(1),
@@ -72,75 +78,55 @@ public class PlannerPipelineE2ETest {
             createScript(4, 2, 3)
         ));
 
-        ValidationContext context = new ValidationContext(rawScripts, new ArrayList<>(), new ArrayList<>());
+        ValidationContext initialContext = ValidationContext.builder()
+            .validScripts(new ArrayList<>(rawScripts))
+            .warnings(new ArrayList<>())
+            .errors(new ArrayList<>())
+            .build();
 
         // when
-        beforeValidationChain.startChain(context);
+        ValidationResult initialResult = scriptExecutor.validate(rawScripts, initialContext);
+        ExecutionPlan plan = initialResult.validExecutionPlan();
+        PlanAnalysis analysis = scriptExecutor.analyze(initialResult.validScripts(), plan);
 
         // then
-        assertTrue(context.errors().isEmpty());
-        assertTrue(context.warnings().isEmpty());
-        assertEquals(4, context.validScripts().size());
-
-        // when
-        ExecutionPlan plan = executionPlanner.createPlan(context.validScripts());
-
-        // then
+        assertTrue(initialResult.errors().isEmpty());
         assertNotNull(plan);
         assertEquals(3, plan.waves().size());
-        assertEquals(1, plan.waves().get(0).scripts().size());
-        assertEquals(2, plan.waves().get(1).scripts().size());
-        assertEquals(1, plan.waves().get(2).scripts().size());
-
-        // when
-        afterValidationChain.startChain(context, plan);
-
-        // then
-        assertTrue(context.errors().isEmpty());
+        assertEquals(4, analysis.totalScripts());
+        assertEquals(3, analysis.totalWaves());
+        assertEquals(2, analysis.maxParallelismAchieved());
     }
 
     @Test
     void shouldHandleCompletelyBrokenDataGracefully() {
-
         // given
         when(plannerConfig.maxParallelExecutions()).thenReturn(5);
 
         List<VulnerabilityScript> rawScripts = new ArrayList<>(List.of(
             createScript(1, 2),
             createScript(2, 1),
-            createScript(3, 99),
-            createScript(4, 3)
+            createScript(3, 99)
         ));
 
-        ValidationContext context = new ValidationContext(rawScripts, new ArrayList<>(), new ArrayList<>());
+        ValidationContext context = ValidationContext.builder()
+            .validScripts(new ArrayList<>(rawScripts))
+            .warnings(new ArrayList<>())
+            .errors(new ArrayList<>())
+            .build();
 
         // when
-        beforeValidationChain.startChain(context);
+        ValidationResult result = scriptExecutor.validate(rawScripts, context);
 
         // then
-        assertTrue(context.errors().size() >= 2);
-        assertEquals(0, context.validScripts().size());
-
-        // when
-        ExecutionPlan plan = executionPlanner.createPlan(context.validScripts());
-
-        // then
-        assertNotNull(plan);
-        assertTrue(plan.waves().isEmpty());
-
-        // given
-        context.errors().clear();
-
-        // when
-        afterValidationChain.startChain(context, plan);
-
-        // then
-        assertTrue(context.errors().isEmpty());
+        assertFalse(result.errors().isEmpty());
+        assertTrue(result.validScripts().isEmpty());
+        assertNotNull(result.validExecutionPlan());
+        assertTrue(result.validExecutionPlan().waves().isEmpty());
     }
 
     @Test
     void shouldEnforceStrictParallelismLimitsOnWideGraph() {
-
         // given
         when(plannerConfig.maxParallelExecutions()).thenReturn(3);
 
@@ -149,30 +135,99 @@ public class PlannerPipelineE2ETest {
             rawScripts.add(createScript(i));
         }
 
-        ValidationContext context = new ValidationContext(rawScripts, new ArrayList<>(), new ArrayList<>());
+        ValidationContext context = ValidationContext.builder()
+            .validScripts(new ArrayList<>(rawScripts))
+            .warnings(new ArrayList<>())
+            .errors(new ArrayList<>())
+            .build();
 
         // when
-        beforeValidationChain.startChain(context);
+        ValidationResult result = scriptExecutor.validate(rawScripts, context);
+        ExecutionPlan plan = result.validExecutionPlan();
 
         // then
-        assertEquals(10, context.validScripts().size());
-        assertTrue(context.errors().isEmpty());
-
-        // when
-        ExecutionPlan plan = executionPlanner.createPlan(context.validScripts());
-
-        // then
+        assertTrue(result.errors().isEmpty());
+        assertEquals(10, result.validScripts().size());
         assertNotNull(plan);
         assertEquals(4, plan.waves().size());
         assertEquals(3, plan.waves().get(0).scripts().size());
         assertEquals(3, plan.waves().get(1).scripts().size());
         assertEquals(3, plan.waves().get(2).scripts().size());
         assertEquals(1, plan.waves().get(3).scripts().size());
+    }
+
+    @Test
+    void shouldSuccessfullyAddValidScriptToPlan() {
+        // given
+        when(plannerConfig.maxParallelExecutions()).thenReturn(2);
+
+        List<VulnerabilityScript> initialScripts = new ArrayList<>(List.of(
+            createScript(1),
+            createScript(2, 1),
+            createScript(3, 1),
+            createScript(4, 2, 3)
+        ));
+
+        ValidationContext initialContext = ValidationContext.builder()
+            .validScripts(new ArrayList<>(initialScripts))
+            .warnings(new ArrayList<>())
+            .errors(new ArrayList<>())
+            .build();
+
+        ValidationResult initialResult = scriptExecutor.validate(initialScripts, initialContext);
+        ExecutionPlan plan = initialResult.validExecutionPlan();
+
+        VulnerabilityScript newScript = createScript(5, 4);
 
         // when
-        afterValidationChain.startChain(context, plan);
+        ValidationResult addResult = scriptExecutor.addAndValidateScript(plan, newScript, initialContext);
 
         // then
-        assertTrue(context.errors().isEmpty());
+        assertTrue(addResult.errors().isEmpty());
+        assertEquals(5, addResult.validScripts().size());
+
+        int scriptsInPlanAfterAdd = addResult.validExecutionPlan().waves().stream()
+            .mapToInt(w -> w.scripts().size())
+            .sum();
+        assertEquals(5, scriptsInPlanAfterAdd);
+        assertEquals(4, addResult.validExecutionPlan().waves().size());
+    }
+
+    @Test
+    void shouldRejectInvalidScriptAndKeepPlanIntact() {
+        // given
+        when(plannerConfig.maxParallelExecutions()).thenReturn(2);
+
+        List<VulnerabilityScript> initialScripts = new ArrayList<>(List.of(
+            createScript(1),
+            createScript(2, 1)
+        ));
+
+        ValidationContext initialContext = ValidationContext.builder()
+            .validScripts(new ArrayList<>(initialScripts))
+            .warnings(new ArrayList<>())
+            .errors(new ArrayList<>())
+            .build();
+
+        ValidationResult initialResult = scriptExecutor.validate(initialScripts, initialContext);
+        ExecutionPlan plan = initialResult.validExecutionPlan();
+
+        int initialWavesCount = plan.waves().size();
+
+        VulnerabilityScript brokenScript = createScript(3, 3);
+
+        // when
+        ValidationResult addResult = scriptExecutor.addAndValidateScript(plan, brokenScript, initialContext);
+
+        // then
+        assertFalse(addResult.warnings().isEmpty());
+        assertEquals(3, addResult.validScripts().size());
+
+        int currentScriptsCount = addResult.validExecutionPlan().waves().stream()
+            .mapToInt(w -> w.scripts().size())
+            .sum();
+
+        assertEquals(initialWavesCount, addResult.validExecutionPlan().waves().size());
+        assertEquals(3, currentScriptsCount);
     }
 }

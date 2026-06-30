@@ -7,7 +7,7 @@ import java.util.Collection;
 
 public interface ExecutionPlanner {
 
-    @NonNull ExecutionPlan createPlan(@NonNull Collection<VulnerabilityScript> scripts);
+    @NonNull ExecutionPlan createPlan(@NonNull Collection<@NonNull VulnerabilityScript> scripts);
 
     void addScript(@NonNull ExecutionPlan plan, @NonNull VulnerabilityScript script);
 }

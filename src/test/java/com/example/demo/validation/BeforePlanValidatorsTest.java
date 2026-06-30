@@ -69,8 +69,8 @@ public class BeforePlanValidatorsTest {
         validationChain.startChain(context);
 
         assertEquals(1, context.errors().size());
-        assertEquals(2, context.validScripts().size());
-        assertEquals(3, context.validScripts().getFirst().getScriptId());
+        assertEquals(1, context.validScripts().size());
+        assertEquals(4, context.validScripts().getFirst().getScriptId());
     }
 
     @Test

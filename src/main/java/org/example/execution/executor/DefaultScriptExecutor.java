@@ -39,9 +39,33 @@ public class DefaultScriptExecutor implements ScriptExecutor {
     }
 
     @Override
+    public @NonNull ValidationResult addAndValidateScript(@NonNull ExecutionPlan plan, @NonNull VulnerabilityScript newScript, @NonNull ValidationContext context) {
+        executionPlanner.addScript(plan, newScript);
+        List<VulnerabilityScript> scripts = extractAllScriptsFromPlan(plan);
+
+        ValidationContext newContext = ValidationContext.builder()
+            .validScripts(new ArrayList<>(scripts))
+            .warnings(new ArrayList<>(context.warnings()))
+            .errors(new ArrayList<>(context.errors()))
+            .build();
+
+        beforePlanValidationChain.startChain(newContext);
+        afterPlanValidationChain.startChain(newContext, plan);
+
+        log.info("add a new script and validation executed, valid scripts: {}", context.validScripts());
+
+        return ValidationResult.builder()
+            .errors(newContext.errors())
+            .warnings(newContext.warnings())
+            .validExecutionPlan(plan)
+            .validScripts(newContext.validScripts())
+            .build();
+    }
+
+
+    @Override
     public @NonNull PlanAnalysis analyze(@NonNull Collection<@NonNull VulnerabilityScript> scripts, @NonNull ExecutionPlan plan) {
         DependencyGraph graph = DependencyGraph.buildGraph(scripts);
-        List<List<Integer>> cycles = DependencyGraphUtils.findAllCycles(graph);
         DependencyGraphUtils.CriticalPath criticalPath = DependencyGraphUtils.calculateCriticalPath(graph);
 
         int totalScripts = scripts.size();
@@ -60,30 +84,23 @@ public class DefaultScriptExecutor implements ScriptExecutor {
             .efficiency(efficiency)
             .criticalPathLength(criticalPath.duration())
             .estimatedExecutionTime(criticalPath.duration())
-            .cycles(cycles)
             .build();
 
     }
 
     @Override
-    public @NonNull ValidationResult validate(@NonNull Collection<@NonNull VulnerabilityScript> scripts) {
-        ValidationContext context = ValidationContext.builder()
-            .validScripts(new ArrayList<>(scripts))
-            .warnings(new ArrayList<>())
-            .errors(new ArrayList<>())
-            .build();
-
+    public @NonNull ValidationResult validate(@NonNull Collection<@NonNull VulnerabilityScript> scripts, @NonNull ValidationContext context) {
         beforePlanValidationChain.startChain(context);
         ExecutionPlan executionPlan = executionPlanner.createPlan(context.validScripts());
         afterPlanValidationChain.startChain(context, executionPlan);
 
-        log.info("valid scripts: {}", context.validScripts());
+        log.info("validation executed, valid scripts: {}", context.validScripts());
 
         return ValidationResult.builder()
             .warnings(context.warnings())
             .errors(context.errors())
             .validScripts(context.validScripts())
-            .executionPlan(executionPlan)
+            .validExecutionPlan(executionPlan)
             .build();
     }
 
@@ -95,4 +112,9 @@ public class DefaultScriptExecutor implements ScriptExecutor {
         return (totalWaves == 0 ? 0 : (double) totalScripts / totalWaves);
     }
 
+    private List<VulnerabilityScript> extractAllScriptsFromPlan(ExecutionPlan plan) {
+        return plan.waves().stream()
+            .flatMap(wave -> wave.scripts().stream())
+            .toList();
+    }
 }

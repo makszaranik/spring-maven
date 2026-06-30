@@ -20,7 +20,7 @@ public class BFSExecutionPlanner implements ExecutionPlanner {
     private final PlannerConfig plannerConfig;
 
     @Override
-    public @NonNull ExecutionPlan createPlan(@NonNull Collection<VulnerabilityScript> scripts) {
+    public @NonNull ExecutionPlan createPlan(@NonNull Collection<@NonNull VulnerabilityScript> scripts) {
         DependencyGraph graph = DependencyGraph.buildGraph(scripts);
         Map<Integer, Integer> currentInDegrees = new HashMap<>();
         Queue<VulnerabilityScript> readyScripts = new PriorityQueue<>(orderStrategy);

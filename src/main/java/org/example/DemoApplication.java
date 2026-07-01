@@ -5,6 +5,8 @@ import org.example.domain.VulnerabilityScript;
 import org.example.execution.executor.ScriptExecutor;
 import org.example.execution.plan.ExecutionPlan;
 import org.example.execution.plan.PlanAnalysis;
+import org.example.graph.DependencyGraph;
+import org.example.graph.DependencyGraphUtils;
 import org.example.validation.ValidationContext;
 import org.example.validation.ValidationResult;
 import org.springframework.boot.SpringApplication;
@@ -27,13 +29,16 @@ public class DemoApplication {
 	public static void main(String[] args) {
 		ConfigurableApplicationContext context = SpringApplication.run(DemoApplication.class, args);
 
-		/*
+
 		ObjectMapper objectMapper = context.getBean(ObjectMapper.class);
 		ScriptExecutor scriptExecutor = context.getBean(ScriptExecutor.class);
 
 		File scriptsFile = new File("src/main/resources/scripts.json");
 		List<VulnerabilityScript> scripts = objectMapper.readValue(scriptsFile, new TypeReference<>() {});
 
+		System.out.println(DependencyGraphUtils.findAllCycles(DependencyGraph.buildGraph(scripts)));
+
+		/*
 		ValidationContext validationContext = ValidationContext.builder()
 			.validScripts(scripts)
 			.warnings(new ArrayList<>())

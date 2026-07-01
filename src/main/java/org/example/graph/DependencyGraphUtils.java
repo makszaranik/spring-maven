@@ -9,39 +9,71 @@ import java.util.*;
 public class DependencyGraphUtils {
 
     public static @NonNull List<List<Integer>> findAllCycles(@NonNull DependencyGraph graph) {
-        Map<Integer, Integer> inDegree = new HashMap<>();
-        Queue<Integer> queue = new LinkedList<>();
-        Set<Integer> processed = new HashSet<>();
+        List<List<Integer>> cycles = new ArrayList<>();
+
+        Map<Integer, Integer> state = new HashMap<>(); //0 - not visited, 1 - processing, 2 - finished
+        Map<Integer, Integer> parent = new HashMap<>();
 
         for (Integer vertex : graph.getAllVertexIds()) {
-            int in = graph.getInDegree(vertex);
-            inDegree.put(vertex, in);
-            if (in == 0) {
-                queue.offer(vertex);
-            }
+            state.put(vertex, 0);
         }
 
-        while (!queue.isEmpty()) {
-            int u = queue.poll();
-            processed.add(u);
+        for (Integer startNode : graph.getAllVertexIds()) {
+            if (state.get(startNode) == 0) {
+                Deque<Integer> stack = new ArrayDeque<>();
+                stack.push(startNode);
 
-            for (Integer v : graph.getAdjacentVertices(u)) {
-                int currentInDegree = inDegree.get(v) - 1;
-                inDegree.put(v, currentInDegree);
-                if (currentInDegree == 0) {
-                    queue.offer(v);
+                while (!stack.isEmpty()) {
+                    int current = stack.pop();
+
+                    if (state.get(current) == 2) {
+                        continue;
+                    }
+
+                    if (state.get(current) == 1) {
+                        state.put(current, 2);
+                        continue;
+                    }
+
+                    state.put(current, 1);
+                    stack.push(current);
+
+                    for (Integer neighbor : graph.getAdjacentVertices(current)) {
+                        int neighborState = state.getOrDefault(neighbor, 0);
+
+                        if (neighborState == 0) {
+                            parent.put(neighbor, current);
+                            stack.push(neighbor);
+                        }
+                        else if (neighborState == 1) { // vertex with 1 status - cycle
+                            List<Integer> cycle = new ArrayList<>();
+                            cycle.add(neighbor);
+
+                            int p = current;
+                            boolean isValid = true;
+
+                            //find cycle path
+                            while (p != neighbor) {
+                                cycle.add(p);
+                                if (!parent.containsKey(p)) {
+                                    isValid = false;
+                                    break;
+                                }
+                                p = parent.get(p);
+                            }
+
+                            if (isValid) {
+                                cycle.add(neighbor);
+                                Collections.reverse(cycle);
+                                cycles.add(cycle);
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        List<Integer> cyclicNodes = new ArrayList<>();
-        for (Integer vertex : graph.getAllVertexIds()) {
-            if (!processed.contains(vertex)) {
-                cyclicNodes.add(vertex);
-            }
-        }
-
-        return cyclicNodes.isEmpty() ? Collections.emptyList() : List.of(cyclicNodes);
+        return cycles;
     }
 
     public static @NonNull CriticalPath calculateCriticalPath(@NonNull DependencyGraph graph) {
